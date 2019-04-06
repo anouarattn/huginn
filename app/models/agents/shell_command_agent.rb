@@ -12,14 +12,22 @@ module Agents
 
     description <<-MD
       The Shell Command Agent will execute commands on your local system, returning the output.
+
       `command` specifies the command (either a shell command line string or an array of command line arguments) to be executed, and `path` will tell ShellCommandAgent in what directory to run this command.  The content of `stdin` will be fed to the command via the standard input.
+
       `expected_update_period_in_days` is used to determine if the Agent is working.
+
       ShellCommandAgent can also act upon received events. When receiving an event, this Agent's options can interpolate values from the incoming event.
       For example, your command could be defined as `{{cmd}}`, in which case the event's `cmd` property would be used.
+
       The resulting event will contain the `command` which was executed, the `path` it was executed under, the `exit_status` of the command, the `errors`, and the actual `output`. ShellCommandAgent will not log an error if the result implies that something went wrong.
+
       If `suppress_on_failure` is set to true, no event is emitted when `exit_status` is not zero.
+
       If `suppress_on_empty_output` is set to true, no event is emitted when `output` is empty.
-      It's possible to pass custom input properties and receive them in the output.
+
+      If `merge` is set to true, the event pass received custom inputs to output.
+
       *Warning*: This type of Agent runs arbitrary commands on your system, #{Agents::ShellCommandAgent.should_run? ? "but is **currently enabled**" : "and is **currently disabled**"}.
       Only enable this Agent if you trust everyone using your Huginn installation.
       You can enable this Agent in your .env file by setting `ENABLE_INSECURE_AGENTS` to `true`.
@@ -27,6 +35,7 @@ module Agents
 
     event_description <<-MD
     Events look like this:
+
         {
           "command": "pwd",
           "path": "/home/Huginn",
@@ -42,7 +51,8 @@ module Agents
           'command' => "pwd",
           'suppress_on_failure' => false,
           'suppress_on_empty_output' => false,
-          'expected_update_period_in_days' => 1
+          'expected_update_period_in_days' => 1,
+          'merge' => false
       }
     end
 
@@ -76,7 +86,11 @@ module Agents
 
     def receive(incoming_events)
       incoming_events.each do |event|
-        handle(interpolated(event), event)
+        if mergeable?
+          handle_with_optional_params(interpolated(event), event)
+        else
+          handle(interpolated(event), event)
+        end
       end
     end
 
@@ -99,6 +113,31 @@ module Agents
           'exit_status' => exit_status,
           'errors' => errors,
           'output' => result,
+        }
+
+        unless suppress_event?(payload)
+          created_event = create_event payload: payload
+        end
+
+        log("Ran '#{command}' under '#{path}'", outbound_event: created_event, inbound_event: event)
+      else
+        log("Unable to run because insecure agents are not enabled.  Edit ENABLE_INSECURE_AGENTS in the Huginn .env configuration.")
+      end
+    end
+    
+    def handle_with_optional_params(opts, event = nil)
+      if Agents::ShellCommandAgent.should_run?
+        command = opts['command']
+        path = opts['path']
+        stdin = opts['stdin']
+        result, errors, exit_status = run_command(path, command, stdin)
+
+        payload = {
+          'command' => command,
+          'path' => path,
+          'exit_status' => exit_status,
+          'errors' => errors,
+          'output' => result,
         }.merge(build_optional_param(opts))
 
         unless suppress_event?(payload)
@@ -109,6 +148,10 @@ module Agents
       else
         log("Unable to run because insecure agents are not enabled.  Edit ENABLE_INSECURE_AGENTS in the Huginn .env configuration.")
       end
+    end
+
+    def mergeable?
+      options[:merge]
     end
 
     def build_optional_param(opts)
