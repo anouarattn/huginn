@@ -60,7 +60,7 @@ describe Agents::ShellCommandAgent do
 
   describe "#working?" do
     it "generating events as scheduled" do
-      stub(@checker).run_command(@valid_path, 'pwd', nil, {}) { ["fake pwd output", "", 0] }
+      stub(@checker).run_command(@valid_path, 'pwd', nil) { ["fake pwd output", "", 0] }
 
       expect(@checker).not_to be_working
       @checker.check
@@ -73,14 +73,9 @@ describe Agents::ShellCommandAgent do
 
   describe "#check" do
     before do
-      orig_run_command = @checker.method(:run_command)
-      stub(@checker).run_command(@valid_path, 'pwd', nil, {}) { ["fake pwd output", "", 0] }
-      stub(@checker).run_command(@valid_path, 'empty_output', nil, {}) { ["", "", 0] }
-      stub(@checker).run_command(@valid_path, 'failure', nil, {}) { ["failed", "error message", 1] }
-      stub(@checker).run_command(@valid_path, 'echo $BUNDLE_GEMFILE', nil, unbundle: true) { orig_run_command.(@valid_path, 'echo $BUNDLE_GEMFILE', nil, unbundle: true) }
-      [[], [{}], [{ unbundle: false }]].each do |rest|
-        stub(@checker).run_command(@valid_path, 'echo $BUNDLE_GEMFILE', nil, *rest) { [ENV['BUNDLE_GEMFILE'].to_s, "", 0] }
-      end
+      stub(@checker).run_command(@valid_path, 'pwd', nil) { ["fake pwd output", "", 0] }
+      stub(@checker).run_command(@valid_path, 'empty_output', nil) { ["", "", 0] }
+      stub(@checker).run_command(@valid_path, 'failure', nil) { ["failed", "error message", 1] }
     end
 
     it "should create an event when checking" do
@@ -88,6 +83,25 @@ describe Agents::ShellCommandAgent do
       expect(Event.last.payload[:path]).to eq(@valid_path)
       expect(Event.last.payload[:command]).to eq('pwd')
       expect(Event.last.payload[:output]).to eq("fake pwd output")
+    end
+
+    it "should create an event with optional params" do
+      checker = build_agent(
+        {
+          path: @valid_path,
+          command: 'pwd',
+          expected_update_period_in_days: '1',
+          A: '1',
+          B: '2'
+        }
+      )
+      stub(checker).run_command(@valid_path, 'pwd', nil) { ["fake pwd output", "", 0] }
+      expect { checker.check }.to change { Event.count }.by(1)
+      expect(Event.last.payload[:path]).to eq(@valid_path)
+      expect(Event.last.payload[:command]).to eq('pwd')
+      expect(Event.last.payload[:output]).to eq("fake pwd output")
+      expect(Event.last.payload[:A]).to eq("1")
+      expect(Event.last.payload[:B]).to eq("2")
     end
 
     it "should create an event when checking (unstubbed)" do
@@ -130,49 +144,11 @@ describe Agents::ShellCommandAgent do
       stub(Agents::ShellCommandAgent).should_run? { false }
       expect { @checker.check }.not_to change { Event.count }
     end
-
-    describe "with unbundle" do
-      before do
-        @checker.options[:command] = 'echo $BUNDLE_GEMFILE'
-        if ENV['TRAVIS'] == 'true'
-          stub.proxy(Bundler).original_env { |env| env.except('BUNDLE_GEMFILE') }
-        end
-      end
-
-      context "unspecified" do
-        it "should be run inside of our bundler context" do
-          expect { @checker.check }.to change { Event.count }.by(1)
-          expect(Event.last.payload[:output].strip).to eq(ENV['BUNDLE_GEMFILE'])
-        end
-      end
-
-      context "explicitly set to false" do
-        before do
-          @checker.options[:unbundle] = false
-        end
-
-        it "should be run inside of our bundler context" do
-          expect { @checker.check }.to change { Event.count }.by(1)
-          expect(Event.last.payload[:output].strip).to eq(ENV['BUNDLE_GEMFILE'])
-        end
-      end
-
-      context "set to true" do
-        before do
-          @checker.options[:unbundle] = true
-        end
-
-        it "should be run outside of our bundler context" do
-          expect { @checker.check }.to change { Event.count }.by(1)
-          expect(Event.last.payload[:output].strip).to eq('') # not_to eq(ENV['BUNDLE_GEMFILE']
-        end
-      end
-    end
   end
 
   describe "#receive" do
     before do
-      stub(@checker).run_command(@valid_path, @event.payload[:cmd], nil, {}) { ["fake ls output", "", 0] }
+      stub(@checker).run_command(@valid_path, @event.payload[:cmd], nil) { ["fake ls output", "", 0] }
     end
 
     it "creates events" do
@@ -181,6 +157,26 @@ describe Agents::ShellCommandAgent do
       expect(Event.last.payload[:path]).to eq(@valid_path)
       expect(Event.last.payload[:command]).to eq(@event.payload[:cmd])
       expect(Event.last.payload[:output]).to eq("fake ls output")
+    end
+
+    it "creates events with optional params" do
+      checker = build_agent(
+        {
+          path: @valid_path,
+          command: 'pwd',
+          expected_update_period_in_days: '1',
+          A: '1',
+          B: '2'
+        }
+      )
+      stub(checker).run_command(@valid_path, @event.payload[:cmd], nil) { ["fake ls output", "", 0] }
+      checker.options[:command] = "{{cmd}}"
+      checker.receive([@event])
+      expect(Event.last.payload[:path]).to eq(@valid_path)
+      expect(Event.last.payload[:command]).to eq(@event.payload[:cmd])
+      expect(Event.last.payload[:output]).to eq("fake ls output")
+      expect(Event.last.payload[:A]).to eq("1")
+      expect(Event.last.payload[:B]).to eq("2")
     end
 
     it "creates events (unstubbed)" do
@@ -197,5 +193,12 @@ describe Agents::ShellCommandAgent do
         @checker.receive([@event])
       }.not_to change { Event.count }
     end
+  end
+
+  def build_agent(options)
+    checker = Agents::ShellCommandAgent.new(name: 'somename', options: options)
+    checker.user = users(:jane)
+    checker.save!
+    checker
   end
 end

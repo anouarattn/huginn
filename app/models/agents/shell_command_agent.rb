@@ -12,22 +12,14 @@ module Agents
 
     description <<-MD
       The Shell Command Agent will execute commands on your local system, returning the output.
-
       `command` specifies the command (either a shell command line string or an array of command line arguments) to be executed, and `path` will tell ShellCommandAgent in what directory to run this command.  The content of `stdin` will be fed to the command via the standard input.
-
       `expected_update_period_in_days` is used to determine if the Agent is working.
-
       ShellCommandAgent can also act upon received events. When receiving an event, this Agent's options can interpolate values from the incoming event.
       For example, your command could be defined as `{{cmd}}`, in which case the event's `cmd` property would be used.
-
       The resulting event will contain the `command` which was executed, the `path` it was executed under, the `exit_status` of the command, the `errors`, and the actual `output`. ShellCommandAgent will not log an error if the result implies that something went wrong.
-
-      If `unbundle` is set to true, the command is run in a clean environment, outside of Huginn's bundler context.
-
       If `suppress_on_failure` is set to true, no event is emitted when `exit_status` is not zero.
-
       If `suppress_on_empty_output` is set to true, no event is emitted when `output` is empty.
-
+      It's possible to pass custom input properties and receive them in the output.
       *Warning*: This type of Agent runs arbitrary commands on your system, #{Agents::ShellCommandAgent.should_run? ? "but is **currently enabled**" : "and is **currently disabled**"}.
       Only enable this Agent if you trust everyone using your Huginn installation.
       You can enable this Agent in your .env file by setting `ENABLE_INSECURE_AGENTS` to `true`.
@@ -35,7 +27,6 @@ module Agents
 
     event_description <<-MD
     Events look like this:
-
         {
           "command": "pwd",
           "path": "/home/Huginn",
@@ -49,11 +40,14 @@ module Agents
       {
           'path' => "/",
           'command' => "pwd",
-          'unbundle' => false,
           'suppress_on_failure' => false,
           'suppress_on_empty_output' => false,
           'expected_update_period_in_days' => 1
       }
+    end
+
+    def default_options_keys
+      default_options.keys << 'stdin'
     end
 
     def validate_options
@@ -97,8 +91,7 @@ module Agents
         command = opts['command']
         path = opts['path']
         stdin = opts['stdin']
-
-        result, errors, exit_status = run_command(path, command, stdin, interpolated.slice(:unbundle).symbolize_keys)
+        result, errors, exit_status = run_command(path, command, stdin)
 
         payload = {
           'command' => command,
@@ -106,7 +99,7 @@ module Agents
           'exit_status' => exit_status,
           'errors' => errors,
           'output' => result,
-        }
+        }.merge(build_optional_param(opts))
 
         unless suppress_event?(payload)
           created_event = create_event payload: payload
@@ -118,13 +111,13 @@ module Agents
       end
     end
 
-    def run_command(path, command, stdin, unbundle: false)
-      if unbundle
-        return Bundler.with_original_env {
-          run_command(path, command, stdin)
-        }
+    def build_optional_param(opts)
+       opts.select do |k,v|
+        !default_options_keys.include?(k)
       end
+    end
 
+    def run_command(path, command, stdin)
       begin
         rout, wout = IO.pipe
         rerr, werr = IO.pipe
