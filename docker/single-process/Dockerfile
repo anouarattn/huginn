@@ -1,6 +1,5 @@
 FROM ubuntu:14.04
 
-RUN apt-get update && apt-get install -y at
 
 COPY docker/scripts/prepare /scripts/
 RUN /scripts/prepare

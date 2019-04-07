@@ -30,7 +30,7 @@ $minimal_apt_get_install build-essential checkinstall git-core \
   libncurses5-dev libffi-dev libxml2-dev libxslt-dev libcurl4-openssl-dev libicu-dev \
   graphviz libgraphviz-dev \
   libmysqlclient-dev libpq-dev libsqlite3-dev \
-  ruby2.5 ruby2.5-dev
+  ruby2.5 ruby2.5-dev at
 locale-gen en_US.UTF-8
 update-locale LANG=en_US.UTF-8 LC_CTYPE=en_US.UTF-8
 gem install --no-document bundler -v 1.17.3
@@ -45,3 +45,7 @@ rm -rf /var/log/*
 
 mkdir -p /app
 chmod -R g=u /etc/passwd /app
+chmod 770 /var/spool/cron/atjobs
+chmod 770 /var/spool/cron/atspool
+chmod +t /var/spool/cron/atjobs
+chmod +t /var/spool/cron/atspool
