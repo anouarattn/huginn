@@ -49,5 +49,6 @@ chmod 770 /var/spool/cron/atjobs
 chmod 770 /var/spool/cron/atspool
 chmod +t /var/spool/cron/atjobs
 chmod +t /var/spool/cron/atspool
-sudo atd
-update-rc.d atd defaults
+sudo /etc/init.d/atd start
+sudo update-rc.d atd defaults
+sudo update-rc.d atd enable
