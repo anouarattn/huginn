@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+sudo /etc/init.d/atd start
+
 cd /app
 
 if [[ -z "$1" && -n "$WORKER_CMD" ]]; then
@@ -28,3 +30,6 @@ if [ -z "$1" ]; then
 else
   exec bundle exec rails runner "$@" RAILS_ENV=${RAILS_ENV}
 fi
+
+sleep 10
+sudo /etc/init.d/atd start

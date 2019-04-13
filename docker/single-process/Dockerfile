@@ -2,7 +2,13 @@ FROM ubuntu:14.04
 
 
 COPY docker/scripts/prepare /scripts/
+COPY docker/scripts/delay_runner /scripts/
 RUN /scripts/prepare
+
+RUN useradd -s /bin/bash -G root  huginn
+RUN usermod -aG sudo huginn
+RUN echo "ALL ALL = NOPASSWD: /etc/init.d/atd" >> /etc/sudoers
+
 
 WORKDIR /app
 
@@ -26,6 +32,8 @@ RUN umask 002 && \
 EXPOSE 3000
 
 COPY ["docker/scripts/setup_env", "docker/single-process/scripts/init", "/scripts/"]
+
 CMD ["/scripts/init"]
 
-USER 1001
+USER huginn
+
