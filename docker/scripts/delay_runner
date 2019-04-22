@@ -3,6 +3,6 @@
 CT="Content-Type:application/json"
 
 at now+ $1 minutes  <<ENDMARKER
-tsp curl --max-time 20 --connect-timeout 20 -d '{"firstName":"$2","phoneNumber":"$3","leadId":"$4","id":"$5","vendorId":"$6","lastName":"$7"}' -H "$CT" -X POST "$8"
+tsp -nf curl --max-time 20 --connect-timeout 20 -d '{"firstName":"$2","phoneNumber":"$3","leadId":"$4","id":"$5","vendorId":"$6","lastName":"$7"}' -H "$CT" -X POST "$8"
 ENDMARKER
 
