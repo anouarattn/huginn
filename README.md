@@ -11,12 +11,12 @@ Huginn is a system for building agents that perform automated tasks for you onli
 #### Here are some of the things that you can do with Huginn:
 
 * Track the weather and get an email when it's going to rain (or snow) tomorrow ("Don't forget your umbrella!")
-* List terms that you care about and receive emails when their occurrence on Twitter changes.  (For example, want to know when something interesting has happened in the world of Machine Learning?  Huginn will watch the term "machine learning" on Twitter and tell you when there is a spike in discussion.)
+* List terms that you care about and receive email when their occurrence on Twitter changes.  (For example, want to know when something interesting has happened in the world of Machine Learning?  Huginn will watch the term "machine learning" on Twitter and tell you when there is a spike in discussion.)
 * Watch for air travel or shopping deals
 * Follow your project names on Twitter and get updates when people mention them
-* Scrape websites and receive emails when they change
+* Scrape websites and receive email when they change
 * Connect to Adioso, HipChat, Basecamp, Growl, FTP, IMAP, Jabber, JIRA, MQTT, nextbus, Pushbullet, Pushover, RSS, Bash, Slack, StubHub, translation APIs, Twilio, Twitter, Wunderground, and Weibo, to name a few.
-* Send digest emails with things that you care about at specific times during the day
+* Send digest email with things that you care about at specific times during the day
 * Track counts of high frequency events and send an SMS within moments when they spike, such as the term "san francisco emergency"
 * Send and receive WebHooks
 * Run custom JavaScript or CoffeeScript functions
@@ -71,8 +71,8 @@ If you just want to play around, you can simply fork this repository, then perfo
 * Read the [wiki][wiki] for usage examples and to get started making new Agents.
 * Periodically run `git fetch upstream` and then `git checkout master && git merge upstream/master` to merge in the newest version of Huginn.
 
-Note: By default, emails are intercepted in the `development` Rails environment, which is what you just setup.  You can view
-them at [http://localhost:3000/letter_opener](http://localhost:3000/letter_opener). If you'd like to send real emails via SMTP when playing
+Note: By default, email messages are intercepted in the `development` Rails environment, which is what you just setup.  You can view
+them at [http://localhost:3000/letter_opener](http://localhost:3000/letter_opener). If you'd like to send real email via SMTP when playing
 with Huginn locally, set `SEND_EMAIL_IN_DEVELOPMENT` to `true` in your `.env` file.
 
 If you need more detailed instructions, see the [Novice setup guide][novice-setup-guide].
@@ -110,11 +110,27 @@ Try Huginn on Heroku: [![Deploy](https://www.herokucdn.com/deploy/button.png)](h
 
 Huginn launches on the free version of Heroku [with significant limitations](https://github.com/huginn/huginn/blob/master/doc/heroku/install.md). For non-experimental use, we strongly recommend Heroku's 1GB paid plan or our Docker container.
 
-### OpenShift Online (v3)
+### OpenShift
 
-Try Huginn on OpenShift Online (v3): `oc new-app -f https://raw.githubusercontent.com/huginn/huginn/master/openshift/templates/huginn-mysql.json` or `oc new-app -f https://raw.githubusercontent.com/huginn/huginn/master/openshift/templates/huginn-postgresql.json`. You can also use the web console to import either json file by going to "Add to Project" -> "Import YAML/JSON".
+#### OpenShift v3
+
+Try Huginn on OpenShift Online (v3)
+
+Create a new app with either `mysql` or `postgres`:
+```bash
+oc new-app -f https://raw.githubusercontent.com/huginn/huginn/master/openshift/templates/huginn-mysql.json
+```
+or
+```bash
+oc new-app -f https://raw.githubusercontent.com/huginn/huginn/master/openshift/templates/huginn-postgresql.json
+```
+**Note**: You can also use the web console to import either json file by going to "Add to Project" -> "Import YAML/JSON".
 
 If you are on the Starter plan, make sure to follow the [guide](https://docs.openshift.com/online/getting_started/beyond_the_basics.html#btb-creating-a-new-application-from-source-code) to remove any existing application.
+
+##### OpenShift v4
+
+If you would like to run this on OpenShift v4+ you should look at the [Docker](https://github.com/huginn/huginn/blob/master/doc/docker/install.md) documentaition as your deployment process.
 
 ### Manual installation on any server
 
